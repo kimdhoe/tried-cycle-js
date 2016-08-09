@@ -2,8 +2,8 @@ import xs from 'xstream'
 import { run } from '@cycle/xstream-run'
 import { div, p, makeDOMDriver } from '@cycle/dom'
 
-const intent = sources =>
-  sources.events('click')
+const intent = DOMSource =>
+  DOMSource.events('click')
 
 const model = reset$ =>
   reset$
