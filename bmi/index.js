@@ -1,56 +1,54 @@
 import xs from 'xstream'
 import { run } from '@cycle/xstream-run'
-import { p, input, h2, div, makeDOMDriver } from '@cycle/dom'
+import { p, h2, div, makeDOMDriver } from '@cycle/dom'
 
+import isolate from '@cycle/isolate'
+
+import LabeledSlider from './LabeledSlider'
 
 function bmi (weight, height) {
   const heightMeters = height * 0.01
   return Math.round(weight / (heightMeters * heightMeters))
 }
 
-function intent (DOMSource) {
-  const changeWeight$ = DOMSource.select('.weight').events('input')
-  const changeHeight$ = DOMSource.select('.height').events('input')
-
-  const weight$ = changeWeight$.map(ev => ev.target.value).startWith(70)
-  const height$ = changeHeight$.map(ev => ev.target.value).startWith(170)
-
-  return {weight$, height$}
+function IsolatedLabeledSlider(sources) {
+  return isolate(LabeledSlider)(sources)
 }
 
-function model (weight$, height$) {
-  return xs.combine(weight$, height$)
-    .map(([weight, height]) => ({bmi: bmi(weight, height), weight, height}))
-}
-
-function renderWeightSlider(weight) {
-  return div([
-    p(`Weight: ${weight}kg`),
-    input('.weight', {attrs: {type: 'range', min: 40, max: 150, value: weight}})
-  ])
-}
-
-function renderHeightSlider(height) {
-  return div([
-    p(`Height: ${height}cm`),
-    input('.height', {attrs: {type: 'range', min: 140, max: 220, value: height}})
-  ])
-}
-
-function view (world$) {
-  return world$.map(({bmi, weight, height}) =>
-    div([
-      renderWeightSlider(weight),
-      renderHeightSlider(height),
-      h2(`BMI is ${bmi}.`)
-    ])
-  )
+function view(bmi$, weightVDom$, heightVDom$) {
+  return xs.combine(bmi$, weightVDom$, heightVDom$)
+    .map(([x, weightVDom, heightVDom]) =>
+      div([
+        weightVDom,
+        heightVDom,
+        h2(`BMI is ${x}.`)
+      ])
+    )
 }
 
 function main (sources) {
-  const {weight$, height$} = intent(sources.DOM)
-  const world$             = model(weight$, height$)
-  const vdom$              = view(world$)
+  const weightProps$ = xs.of({
+    label: 'Weight', unit: 'kg', min: 40, max: 150, init: 70
+  })
+  const heightProps$ = xs.of({
+    label: 'Height', unit: 'cm', min: 140, max: 220, init: 170
+  })
+
+  const weightSources = {DOM: sources.DOM, props: weightProps$}
+  const heightSources = {DOM: sources.DOM, props: heightProps$}
+
+  const weightSinks = IsolatedLabeledSlider(weightSources)
+  const heightSinks = IsolatedLabeledSlider(heightSources)
+
+  const weightValue$ = weightSinks.value
+  const heightValue$ = heightSinks.value
+  const weightVDom$  = weightSinks.DOM
+  const heightVDom$  = heightSinks.DOM
+
+  const bmi$ = xs.combine(weightValue$, heightValue$)
+    .map(([w, h]) => bmi(w, h))
+
+  const vdom$ = view(bmi$, weightVDom$, heightVDom$)
 
   const sinks = {
     DOM: vdom$

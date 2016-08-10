@@ -14,6 +14,7 @@ function model(newValue$, props$) {
         .map(value => ({...props, value}))
         .startWith({...props, value: props.init}))
     .flatten()
+    .remember()
 }
 
 function view(world$) {
@@ -32,27 +33,17 @@ function view(world$) {
   )
 }
 
-function main(sources) {
+function LabeledSlider(sources) {
   const newValue$ = intent(sources.DOM)
   const world$    = model(newValue$, sources.props)
   const vdom$     = view(world$)
 
   const sinks = {
-    DOM: vdom$
+    DOM: vdom$,
+    value: world$.map(world => world.value)
   }
 
   return sinks
 }
 
-const drivers = {
-  DOM: makeDOMDriver('#app'),
-  props: () => xs.of({
-    label: 'Height',
-    unit:  'cm',
-    min:   140,
-    max:   220,
-    init:  170
-  })
-}
-
-run(main, drivers)
+export default LabeledSlider
