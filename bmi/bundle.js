@@ -13,14 +13,14 @@ var _dom = require('@cycle/dom');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var bmi = function bmi(weight, height) {
+function bmi(weight, height) {
   var heightMeters = height * 0.01;
   return Math.round(weight / (heightMeters * heightMeters));
-};
+}
 
-var main = function main(sources) {
-  var changeWeight$ = sources.DOM.select('.weight').events('input');
-  var changeHeight$ = sources.DOM.select('.height').events('input');
+function intent(DOMSource) {
+  var changeWeight$ = DOMSource.select('.weight').events('input');
+  var changeHeight$ = DOMSource.select('.height').events('input');
 
   var weight$ = changeWeight$.map(function (ev) {
     return ev.target.value;
@@ -29,29 +29,47 @@ var main = function main(sources) {
     return ev.target.value;
   }).startWith(170);
 
-  var world$ = _xstream2.default.combine(weight$, height$).map(function (_ref) {
+  return { weight$: weight$, height$: height$ };
+}
+
+function model(weight$, height$) {
+  return _xstream2.default.combine(weight$, height$).map(function (_ref) {
     var _ref2 = _slicedToArray(_ref, 2);
 
     var weight = _ref2[0];
     var height = _ref2[1];
     return { bmi: bmi(weight, height), weight: weight, height: height };
   });
+}
+
+function view(world$) {
+  return world$.map(function (_ref3) {
+    var bmi = _ref3.bmi;
+    var weight = _ref3.weight;
+    var height = _ref3.height;
+    return (0, _dom.div)([(0, _dom.div)([(0, _dom.p)('Weight: ' + weight + 'kg'), (0, _dom.input)('.weight', {
+      attrs: { type: 'range', min: 40, max: 150, value: weight }
+    })]), (0, _dom.div)([(0, _dom.p)('Height: ' + height + 'cm'), (0, _dom.input)('.height', {
+      attrs: { type: 'range', min: 140, max: 220, value: height }
+    })]), (0, _dom.h2)('BMI is ' + bmi + '.')]);
+  });
+}
+
+function main(sources) {
+  var _intent = intent(sources.DOM);
+
+  var weight$ = _intent.weight$;
+  var height$ = _intent.height$;
+
+  var world$ = model(weight$, height$);
+  var vdom$ = view(world$);
 
   var sinks = {
-    DOM: world$.map(function (_ref3) {
-      var bmi = _ref3.bmi;
-      var weight = _ref3.weight;
-      var height = _ref3.height;
-      return (0, _dom.div)([(0, _dom.div)([(0, _dom.p)('Weight: ' + weight + 'kg'), (0, _dom.input)('.weight', {
-        attrs: { type: 'range', min: 40, max: 150, value: weight }
-      })]), (0, _dom.div)([(0, _dom.p)('Height: ' + height + 'cm'), (0, _dom.input)('.height', {
-        attrs: { type: 'range', min: 140, max: 220, value: height }
-      })]), (0, _dom.h2)('BMI is ' + bmi + '.')]);
-    })
+    DOM: vdom$
   };
 
   return sinks;
-};
+}
 
 var drivers = {
   DOM: (0, _dom.makeDOMDriver)('#app')
