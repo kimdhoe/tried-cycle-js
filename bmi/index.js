@@ -2,6 +2,7 @@ import xs from 'xstream'
 import { run } from '@cycle/xstream-run'
 import { p, input, h2, div, makeDOMDriver } from '@cycle/dom'
 
+
 function bmi (weight, height) {
   const heightMeters = height * 0.01
   return Math.round(weight / (heightMeters * heightMeters))
